@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 
 
-def plot_3d(vertices, arestas, cor_vertice, cor_arestas):
+def plot_3d(vertices, arestas, cor_vertice = 'black', cor_arestas = 'red'):
     print("Número de vértices:", len(vertices))
     print(vertices)
     print("Número de arestas:", len(arestas))
