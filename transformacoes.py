@@ -3,21 +3,21 @@ import math
 import numpy as np
 
 
-def translator(vertices, tx=0, ty=0, tz=0):
-    matriz_translator = np.array([[1, 0, 0, tx],
-                                  [0, 1, 0, ty],
-                                  [0, 0, 1, tz],
-                                  [0, 0, 0, 1]])
+def translacao(vertices, tx, ty, tz):
+    """
+    Aplica uma translação aos vértices.
 
-    # Adiciona as coordenadas homogêneas
-    vertices_homogeneous = np.column_stack((vertices, np.ones(len(vertices))))
+    :param vertices: Array de vértices (Nx3).
+    :param tx: Translação em X.
+    :param ty: Translação em Y.
+    :param tz: Translação em Z.
+    :return: Vértices transladados.
+    """
+    if vertices is None:
+        return None  # Verifica se vertices não é None
 
-    # Realiza a multiplicação da matriz de translação
-    vertices_transformados_homogeneous = np.dot(vertices_homogeneous, matriz_translator.T)
-
-    # Remove as coordenadas homogêneas
-    vertices_transladados = vertices_transformados_homogeneous[:, :3]
-
+    matriz_translacao = np.array([tx, ty, tz])
+    vertices_transladados = vertices + matriz_translacao
     return vertices_transladados
 
 

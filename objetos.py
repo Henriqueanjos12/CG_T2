@@ -1,173 +1,176 @@
-import math
-
 import numpy as np
 
 
-def cilindro_cone_cubo_piramide(raio_base, altura, centro=(0, 0, 0), raio_topo=0.5, num_fatias=10, num_arestas_base=4):
-    lista_vertices = []  # Lista para armazenar os vértices da malha
-    lista_arestas = []  # Lista para armazenar as arestas da malha
-    # Inicializa as variáveis de coordenadas da seção anterior
-    x_ant, y_ant, z_ant = None, None, None
-
-    # Gera valores para a coordenada z ao longo da altura
-    z_valores = np.linspace(centro[2] - altura / 2, centro[2] + altura / 2, num_fatias)
-
-    for i in range(num_fatias):
-        # Gera valores de theta (ângulo) para criar as seções circulares
-        theta = np.linspace(0, 2 * np.pi, num_arestas_base, endpoint=False)
-        raio = raio_base + (raio_topo - raio_base) * (i / (num_fatias - 1))
-
-        # Calcula as coordenadas x, y e z para cada ponto na seção circular
-        x = centro[0] + raio * np.cos(theta)
-        y = centro[1] + raio * np.sin(theta)
-        z_val = np.full_like(theta, z_valores[i])
-
-        # Adiciona os vértices gerados à lista de vértices
-        lista_vertices.extend(zip(x, y, z_val))
-
-        # Cria as arestas conectando os vértices na seção atual com os da seção anterior
-        if i > 0:
-            lista_arestas.extend(zip(
-                [lista_vertices.index((x_ant[j], y_ant[j], z_ant[j])) for j in range(len(x_ant))],
-                [lista_vertices.index((x[j], y[j], z_val[j])) for j in range(len(x))]
-            ))
-
-        # Cria as arestas conectando os vértices na seção atual entre si
-        lista_arestas.extend(zip(
-            [lista_vertices.index((x[j], y[j], z_val[j])) for j in range(len(x) - 1)],
-            [lista_vertices.index((x[j + 1], y[j + 1], z_val[j + 1])) for j in range(len(x) - 1)]
-        ))
-
-        # Conecta o último vértice ao primeiro vértice para fechar a seção circular
-        lista_arestas.append(
-            (lista_vertices.index((x[-1], y[-1], z_val[-1])), lista_vertices.index((x[0], y[0], z_val[0]))))
-
-        # Atualiza as variáveis de coordenadas da seção anterior
-        x_ant, y_ant, z_ant = x, y, z_val
-
-    # Converte as listas de vértices e arestas em arrays numpy
-    array_vertices = np.array(lista_vertices)
-    array_arestas = np.array(lista_arestas)
-
-    return array_vertices, array_arestas
+def caixa_sem_tampa(lado, altura, origem=(0, 0, 0)):
+    ox, oy, oz = origem
+    vertices = np.array([
+        [ox, oy, oz],
+        [ox + lado, oy, oz],
+        [ox + lado, oy + lado, oz],
+        [ox, oy + lado, oz],
+        [ox, oy, oz + altura],
+        [ox + lado, oy, oz + altura],
+        [ox + lado, oy + lado, oz + altura],
+        [ox, oy + lado, oz + altura]
+    ])
+    faces = [
+        [0, 1, 2, 3],  # Base inferior
+        [0, 1, 5, 4],  # Face lateral
+        [1, 2, 6, 5],  # Face lateral
+        [2, 3, 7, 6],  # Face lateral
+        [3, 0, 4, 7]  # Face lateral
+    ]
+    return vertices, faces
 
 
-def esfera(raio, centro=(0, 0, 0), num_fatias=100, num_arestas_meridiano=100):
-    lista_vertices = []  # Lista para armazenar os vértices da malha
-    lista_arestas = []  # Lista para armazenar as arestas da malha
+# Função que retorna os vértices e faces de um tronco de cone
+def tronco_de_cone(raio_base_inferior, raio_base_superior, altura, num_lados=20, origem=(0, 0, 0)):
+    ox, oy, oz = origem
 
-    # Gera valores de inclinação (ângulo polar) na esfera
-    phi = np.linspace(0, np.pi, num_fatias)
+    # Vértices da base inferior e superior
+    vertices_inferior = []
+    vertices_superior = []
+    for i in range(num_lados):
+        angulo = (2 * np.pi * i) / num_lados
+        x_inferior = ox + raio_base_inferior * np.cos(angulo)
+        y_inferior = oy + raio_base_inferior * np.sin(angulo)
+        vertices_inferior.append([x_inferior, y_inferior, oz])
 
-    # Gera valores de longitude (ângulo azimutal) na esfera
-    theta = np.linspace(0, 2 * np.pi, num_arestas_meridiano + 1)
+        x_superior = ox + raio_base_superior * np.cos(angulo)
+        y_superior = oy + raio_base_superior * np.sin(angulo)
+        vertices_superior.append([x_superior, y_superior, oz + altura])
 
-    for i in range(num_fatias):
-        for j in range(num_arestas_meridiano + 1):
-            # Coordenadas esféricas para cartesianas
-            x = centro[0] + raio * np.sin(phi[i]) * np.cos(theta[j])
-            y = centro[1] + raio * np.sin(phi[i]) * np.sin(theta[j])
-            z = centro[2] + raio * np.cos(phi[i])
+    # Vértices completos
+    vertices = np.array(vertices_inferior + vertices_superior)  # Garantir que seja um numpy array
 
-            lista_vertices.append((x, y, z))  # Adiciona o vértice à lista
+    # Criando as faces laterais
+    num_vertices = len(vertices_inferior)
+    faces = [
+        [i, (i + 1) % num_vertices, (i + 1) % num_vertices + num_vertices, i + num_vertices]
+        for i in range(num_vertices)
+    ]
 
-            if i < num_fatias - 1 and j < num_arestas_meridiano:
-                # Cria arestas conectando vértices adjacentes na mesma linha de longitude
-                aresta1 = i * (num_arestas_meridiano + 1) + j
-                aresta2 = aresta1 + 1
-                aresta3 = (aresta1 + num_arestas_meridiano + 1) % (num_fatias * (num_arestas_meridiano + 1))
-                aresta4 = (aresta2 + num_arestas_meridiano + 1) % (num_fatias * (num_arestas_meridiano + 1))
+    # Face da base inferior
+    faces.append([i for i in range(num_vertices)])
 
-                lista_arestas.append((aresta1, aresta2))
-                lista_arestas.append((aresta2, aresta4))
-                lista_arestas.append((aresta4, aresta3))
-                lista_arestas.append((aresta3, aresta1))
+    # Face da base superior
+    faces.append([i + num_vertices for i in range(num_vertices)])
 
-    # Adiciona os polos (norte e sul)
-    lista_vertices.append((centro[0], centro[1], centro[2] + raio))
-    lista_vertices.append((centro[0], centro[1], centro[2] - raio))
-
-    # Converte as listas de vértices e arestas em arrays numpy
-    array_vertices = np.array(lista_vertices)
-    array_arestas = np.array(lista_arestas)
-
-    return array_vertices, array_arestas
+    return vertices, faces
 
 
-def esferas(raio, num_esferas=2, num_paralelos=3, num_meridianos=5):
-    lista_vertices = []
-    lista_arestas = []
-
-    raios_intermediarios = np.linspace(1, raio, num_esferas)
-
-    for r in raios_intermediarios:
-        vertices_esfera, arestas_esfera = esfera(r, centro=(0, 0, 0), num_fatias=num_paralelos,
-                                                 num_arestas_meridiano=num_meridianos)
-
-        # Ajustar a forma das arrays resultantes da função gerar_esfera
-        vertices_esfera = np.array(vertices_esfera)
-        arestas_esfera = np.array(arestas_esfera)
-
-        # Adicionar os vértices e ajustar os índices das arestas para a nova esfera
-        if len(lista_vertices) > 0:
-            arestas_esfera += len(lista_vertices)
-
-        lista_vertices.extend(vertices_esfera)
-        lista_arestas.extend(arestas_esfera)
-
-    return np.array(lista_vertices), np.array(lista_arestas)
+# Função para gerar pontos de uma curva de Hermite
+def gerar_pontos_curva_hermite(p1, p2, t1, t2, num_pontos=20):
+    t = np.linspace(0, 1, num_pontos)
+    h1 = 2 * t ** 3 - 3 * t ** 2 + 1
+    h2 = -2 * t ** 3 + 3 * t ** 2
+    h3 = t ** 3 - 2 * t ** 2 + t
+    h4 = t ** 3 - t ** 2
+    return h1[:, None] * p1 + h2[:, None] * p2 + h3[:, None] * t1 + h4[:, None] * t2
 
 
-def toroide(R, r, centro=(0, 0, 0), num_fatias=10, num_arestas_meridiano=10):
-    vertices = []  # Lista para armazenar os vértices da malha
-    arestas = []  # Lista para armazenar as arestas da malha
+# Função para criar o cano ao longo de uma curva de Hermite
+def cano(p1, p2, t1, t2, raio_cano, num_pontos_trajetoria=20, num_lados=20):
+    pontos_trajetoria = gerar_pontos_curva_hermite(p1, p2, t1, t2, num_pontos_trajetoria)
+    vertices = []
+    faces = []
 
-    for i in range(num_fatias):
-        phi = 2 * math.pi * i / num_fatias
-        for j in range(num_arestas_meridiano):
-            theta = 2 * math.pi * j / num_arestas_meridiano
+    # Gerar os vértices para cada ponto da trajetória
+    for i in range(num_pontos_trajetoria):
+        centro = pontos_trajetoria[i]
+        circunferencia = []
+        for j in range(num_lados):
+            angulo = (2 * np.pi * j) / num_lados
+            x = centro[0] + raio_cano * np.cos(angulo)
+            y = centro[1] + raio_cano * np.sin(angulo)
+            z = centro[2]
+            circunferencia.append([x, y, z])
+        vertices += circunferencia
 
-            # Coordenadas paramétricas do toroide com raio externo R e raio interno r
-            x = (R + r * math.cos(theta)) * math.cos(phi) + centro[0]
-            y = (R + r * math.cos(theta)) * math.sin(phi) + centro[1]
-            z = r * math.sin(theta) + centro[2]
+    # Criar as faces conectando as circunferências
+    for i in range(num_pontos_trajetoria - 1):
+        for j in range(num_lados):
+            proximo_j = (j + 1) % num_lados
+            face = [
+                i * num_lados + j,
+                i * num_lados + proximo_j,
+                (i + 1) * num_lados + proximo_j,
+                (i + 1) * num_lados + j
+            ]
+            faces.append(face)
 
-            vertices.append((x, y, z))  # Adiciona o vértice à lista
-
-            # Conectar com o próximo ponto na mesma fatia (meridiano)
-            next_index = (j + 1) % num_arestas_meridiano
-            arestas.append((i * num_arestas_meridiano + j, i * num_arestas_meridiano + next_index))
-
-            # Conectar com o ponto na fatia seguinte (latitudinal)
-            next_fatia = (i + 1) % num_fatias
-            arestas.append((i * num_arestas_meridiano + j, next_fatia * num_arestas_meridiano + j))
-
-    # Converte as listas de vértices e arestas em arrays numpy
-    array_vertices = np.array(vertices)
-    array_arestas = np.array(arestas)
-
-    return array_vertices, array_arestas
-
-
-def cilindro(raio, num_circunferencias, num_arestas_base):
-    return cilindro_cone_cubo_piramide(raio_base=raio, altura=2 * raio, centro=(0, 0, 0), raio_topo=raio,
-                                       num_fatias=num_circunferencias,
-                                       num_arestas_base=num_arestas_base)
+    return np.array(vertices), faces
 
 
-def cone(raio, num_circunferencias, num_arestas_base):
-    return cilindro_cone_cubo_piramide(raio_base=raio, altura=3 * raio, centro=(0, 0, 0), raio_topo=0,
-                                       num_fatias=num_circunferencias,
-                                       num_arestas_base=num_arestas_base)
+# Função para criar um cilindro com fundo
+def cilindro_sem_tampa(raio, altura, num_lados=20):
+    vertices_base_inferior = []
+    vertices_base_superior = []
+
+    # Gerar os vértices das bases
+    for i in range(num_lados):
+        angulo = (2 * np.pi * i) / num_lados
+        x = raio * np.cos(angulo)
+        y = raio * np.sin(angulo)
+        vertices_base_inferior.append([x, y, 0])  # Base inferior no z = 0
+        vertices_base_superior.append([x, y, altura])  # Base superior no z = altura
+
+    # Combinar os vértices das bases
+    vertices = vertices_base_inferior + vertices_base_superior
+    faces = []
+
+    # Criar faces laterais do cilindro
+    for i in range(num_lados):
+        proximo = (i + 1) % num_lados
+        faces.append([i, proximo, num_lados + proximo, num_lados + i])
+
+    # Adicionar o fundo da base inferior
+    centro_base = len(vertices)  # Índice do centro da base inferior
+    vertices.append([0, 0, 0])  # Centro da base inferior
+    for i in range(num_lados):
+        proximo = (i + 1) % num_lados
+        faces.append([centro_base, i, proximo])
+
+    return np.array(vertices), faces
 
 
-def cubo(lado, num_quadrados=2):
-    return cilindro_cone_cubo_piramide(raio_base=lado * math.sqrt(2) / 2, altura=lado, centro=(0, 0, 0),
-                                       raio_topo=lado * math.sqrt(2) / 2, num_fatias=num_quadrados,
-                                       num_arestas_base=4)
+# Função para combinar vértices e faces de dois objetos
+def combinar_vertices_faces(vertices1, faces1, vertices2, faces2):
+    """
+    Combina os vértices e faces de dois sólidos 3D.
+    """
+    offset = len(vertices1)  # Deslocamento para ajustar os índices dos vértices do segundo objeto
+
+    # Combina os vértices
+    vertices_comb = np.vstack((vertices1, vertices2))
+
+    # Atualiza e combina as faces, ajustando os índices dos vértices do segundo objeto
+    faces_comb = faces1 + [[v + offset for v in face] for face in faces2 if
+                           isinstance(face, (list, np.ndarray)) and all(isinstance(v, int) for v in face)]
+
+    return vertices_comb, faces_comb
 
 
-def tronco_piramide(lado_menor, lado_maior, altura, num_trapezios=2, num_arestas_base=4):
-    return cilindro_cone_cubo_piramide(raio_base=lado_maior * math.sqrt(2) / 2, altura=altura, centro=(0, 0, 0),
-                                       raio_topo=lado_menor * math.sqrt(2) / 2, num_fatias=num_trapezios,
-                                       num_arestas_base=num_arestas_base)
+# Função para compor e visualizar a caneca com alça e fundo
+def caneca(raio_caneca=2, altura_caneca=5, raio_alca=0.3):
+    # Ajustar a posição inicial e final da alça para que fiquem na mesma face
+    angulo_face = np.pi / 2  # Alça conectada em uma face ao longo do eixo Y
+    p1 = np.array([raio_caneca * np.cos(angulo_face), raio_caneca * np.sin(angulo_face), altura_caneca * 0.75])
+    p2 = np.array([raio_caneca * np.cos(angulo_face), raio_caneca * np.sin(angulo_face), altura_caneca * 0.25])
+    t1 = np.array([0, 3, 0])
+    t2 = np.array([0, -3, 0])
+
+    # Criar o corpo da caneca (cilindro com fundo)
+    vertices_caneca, faces_caneca = cilindro_sem_tampa(raio_caneca, altura_caneca)
+
+    # Criar a alça da caneca
+    vertices_alca, faces_alca = cano(p1, p2, t1, t2, raio_alca)
+
+    # Combinar os vértices e faces da caneca e da alça
+    vertices_comb, faces_comb = combinar_vertices_faces(
+        vertices_caneca, faces_caneca,
+        vertices_alca, faces_alca
+    )
+
+    # Retornar os vértices e faces combinados
+    return vertices_comb, faces_comb

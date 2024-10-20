@@ -1,59 +1,97 @@
-import numpy as np
-from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
-def plot_3d(vertices, arestas, cor_vertice = 'black', cor_arestas = 'red'):
+def plot_3d(vertices, faces, ax=None, cor_vertice='black', cor_arestas='red', cor_faces='green', title=None):
     print("Número de vértices:", len(vertices))
     print(vertices)
-    print("Número de arestas:", len(arestas))
-    print(arestas)
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    print("Número de faces:", len(faces))
+    print(faces)
+
+    # Se um eixo não for fornecido, criar uma nova figura e eixo 3D
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
 
     # Plotar vértices
     ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], color=cor_vertice, marker='o', label='Vértices')
-    # Plotar arestas
-    arestas_conjunto = set(map(tuple, arestas))
+
+    # Plotar faces com cor específica
     ax.add_collection3d(
-        Poly3DCollection([vertices[list(aresta)] for aresta in arestas_conjunto], color=cor_arestas, linewidths=1,
-                         edgecolors='red', alpha=1))
+        Poly3DCollection([vertices[face] for face in faces], facecolors=cor_faces, linewidths=1, edgecolors=cor_arestas,
+                         alpha=0.5)
+    )
+
+    # Definir os rótulos dos eixos
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    plt.legend()
-    plt.show()
+    # Definir o título, se fornecido
+    if title:
+        ax.set_title(title, fontsize=14)
+
+    # Mostrar a legenda
+    ax.legend()
+
+    # Mostrar o gráfico se não houver um eixo fornecido
+    if ax is None:
+        plt.show()
 
 
-def plota_cenario(ax, vertices, arestas, cor):
-    vertices_homogeneous = np.concatenate([vertices, np.ones((vertices.shape[0], 1))], axis=-1).T
-    vertices_transformados = vertices_homogeneous[:3, :].T
+def plota_cenario(ax, vertices, faces, cor_vertice='black', cor_arestas='red', cor_faces='green'):
+    """
+    Função para plotar um cenário 3D com vértices e faces.
 
-    linhas = [(vertices_transformados[aresta[0]], vertices_transformados[aresta[1]]) for aresta in arestas]
-    pontos_plotados = Line3DCollection(linhas, colors=cor)
+    :param ax: Axes 3D para plotagem.
+    :param vertices: Array de vértices 3D.
+    :param faces: Lista de listas, onde cada lista define os índices dos vértices que formam uma face.
+    :param cor_vertice: Cor dos vértices.
+    :param cor_arestas: Cor das arestas (contorno das faces).
+    :param cor_faces: Cor das faces.
+    """
+    # Plotar vértices
+    ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], color=cor_vertice, marker='o', label='Vértices')
 
-    ax.add_collection3d(pontos_plotados)
+    # Criar as faces como polígonos 3D
+    face_polys = Poly3DCollection([vertices[face] for face in faces], facecolors=cor_faces, linewidths=1,
+                                  edgecolors=cor_arestas, alpha=0.5)
 
-    return pontos_plotados
+    # Adicionar as faces ao gráfico
+    ax.add_collection3d(face_polys)
+
+    # Definir os rótulos dos eixos
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    return face_polys
 
 
 def cria_cenario():
+    """
+    Função que cria o cenário base 3D com os eixos coordenados e limites definidos.
+    """
     fig = plt.figure(figsize=(15, 12))
 
-    # fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, projection='3d')
-    ax.set_title('Coordenadas do Mundo')
+    # Criar o subplot 3D
+    ax = fig.add_subplot(111, projection='3d')
+    # ax.set_title('Coordenadas do Mundo')
 
-    # Define os limites do gráfico
+    # Definir os limites do gráfico
     limites = [-10, 10]
+    ax.set_xlim(limites)
+    ax.set_ylim(limites)
+    ax.set_zlim(limites)
+
+    # Desenhar as linhas dos eixos coordenados
     for s in [-1, 1]:
         ax.plot([0, 0], [0, 0], [s * limites[0], s * limites[1]], color='k', linestyle='-', linewidth=1)
         ax.plot([0, 0], [s * limites[0], s * limites[1]], [0, 0], color='k', linestyle='-', linewidth=1)
         ax.plot([s * limites[0], s * limites[1]], [0, 0], [0, 0], color='k', linestyle='-', linewidth=1)
-        # Legenda
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
+
     return ax
